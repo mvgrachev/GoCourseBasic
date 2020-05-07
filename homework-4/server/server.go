@@ -29,8 +29,8 @@ func New(lg *logrus.Logger, db *sql.DB) *Server {
 		indexTemplate: "index.html",
 		Page: models.Page{
 			Posts: models.PostItemSlice{
-				{Id: "0", Title: "123", Date: "12345", Summary: "erferf", Body: "afasdf", File: "afasf"},
-				{Id: "1", Title: "1sdfv23", Date: "1adfv2345", Summary: "eadfvrferf", Body: "aafvfasdf", File: "afvafasf"},
+				{Id: "0", Title: "123", Date: "12345", Summary: "erferf", Body: "afasdf"},
+				{Id: "1", Title: "1sdfv23", Date: "1adfv2345", Summary: "eadfvrferf", Body: "aafvfasdf"},
 			},
 		},
 	}

@@ -3,10 +3,11 @@ package models
 import (
 	"database/sql"
 	"html/template"
-	"strings"
-	"io/ioutil"
 	"github.com/russross/blackfriday"
 )
+
+const ACTIVE_STATUS = 1
+const INACTIVE_STATUS = 2
 
 // PostItem - объект поста
 type PostItem struct {
@@ -14,8 +15,8 @@ type PostItem struct {
 	Title   string `json:"title"` 
 	Date    string `json:"date"`
 	Summary string `json:"summary"`
-	Body    template.HTML `json:"body"`
-	File    string `json:"file"`
+	Body    interface{} `json:"body"`
+	Status  int    `json:"status"`
 }
 
 // PostItemSlice - массив постов
@@ -23,8 +24,8 @@ type PostItemSlice []PostItem
 
 func (post *PostItem) Insert(db *sql.DB) error {
 	_, err := db.Exec(
-		"INSERT INTO posts (id, file, status) VALUES (?, ?, ?)",
-		post.Id, post.File, 1,
+		"INSERT INTO posts (title, summary, body, status) VALUES (?, ?, ?, ?)",
+		post.Title, post.Summary, post.Body, ACTIVE_STATUS,
 	)
 	return err
 }
@@ -32,45 +33,44 @@ func (post *PostItem) Insert(db *sql.DB) error {
 func (post *PostItem) Delete(db *sql.DB) error {
 	_, err := db.Exec(
 		"UPDATE posts SET status = ? WHERE id = ?",
-		2, post.Id,
+		INACTIVE_STATUS, post.Id,
 	)
 	return err
 }
 
 func (post *PostItem) Update(db *sql.DB) error {
 	_, err := db.Exec(
-		"UPDATE posts SET file = ?, WHERE id = ?",
-		post.File, post.Id,
+		"UPDATE posts SET body = ? WHERE id = ?",
+		post.Body, post.Id,
 	)
 	return err
 }
 
 func GetAllPostItems(db *sql.DB) (PostItemSlice, error) {
-	rows, err := db.Query("SELECT id, file FROM posts WHERE status = ? ORDER BY id DESC", 1)
+	rows, err := db.Query("SELECT id, title, created_at, summary, body, status FROM posts WHERE status = ? ORDER BY id DESC", ACTIVE_STATUS)
 	if err != nil {
 		return nil, err
 	}
 	posts := make(PostItemSlice, 0, 8)
 	for rows.Next() {
 		post := PostItem{}
-		var id string
-		var file string
-		if err = rows.Scan(&id, &file); err != nil {
+		var body string
+		if err = rows.Scan(&post.Id, &post.Title, &post.Date, &post.Summary, &body, &post.Status); err != nil {
 			return nil, err
 		}
-		post = getPostFromFile(id, file)
+		
+		post.Body = template.HTML(blackfriday.MarkdownCommon([]byte(body)))
 		posts = append(posts, post)
 	}
 	return posts, err
 }
 
 func GetPost(db *sql.DB, id string) (PostItem, error) {
-	var file string
-
-	row := db.QueryRow("SELECT file FROM posts WHERE status = ? AND id = ? ORDER BY id DESC", 1, id)
+	row := db.QueryRow("SELECT id, title, created_at, summary, body, status FROM posts WHERE status = ? AND id = ? ORDER BY id DESC", ACTIVE_STATUS, id)
 
 	post := PostItem{}
-	err := row.Scan(&file)	
+	var body string
+	err := row.Scan(&post.Id, &post.Title, &post.Date, &post.Summary, &body, &post.Status)	
 	switch {
 	case err == sql.ErrNoRows:
 		return post, err
@@ -78,25 +78,7 @@ func GetPost(db *sql.DB, id string) (PostItem, error) {
 		return post, err
 	}
 
-	post = getPostFromFile( id, file) 
+	post.Body = template.HTML(blackfriday.MarkdownCommon([]byte(body)))
 	
 	return post, err
-}
-
-func getPostFromFile( id string, fname string) PostItem {
-	fpath := []string{"./posts", fname}
-	f := strings.Join(fpath, "/")    
-	file := strings.Replace(f, "./posts/", "", -1)
-	file = strings.Replace(file, ".md", "", -1)
-	fileread, _ := ioutil.ReadFile(f)
-	lines := strings.Split(string(fileread), "\n")
-	title := string(lines[0])
-	date := string(lines[1])
-	summary := string(lines[2])
-	body := strings.Join(lines[3:len(lines)], "\n")
-	postHtml := template.HTML(blackfriday.MarkdownCommon([]byte(body)))
-	
-	post := PostItem{id, title, date, summary, postHtml, file}
-
-	return post
 }

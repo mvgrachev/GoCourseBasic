@@ -11,6 +11,7 @@ import (
 	"GoCourseBasic/homework-4/models"
 
 	"github.com/go-chi/chi"
+	"strings"
 )
 
 // getAllPosts - возвращает все посты
@@ -106,9 +107,14 @@ func (serv *Server) postPostHandler(w http.ResponseWriter, r *http.Request) {
 	data, _ := ioutil.ReadAll(r.Body)
 
 	post := models.PostItem{}
-	_ = json.Unmarshal(data, &post)
+	err := json.Unmarshal(data, &post)
+	var body []string
+	for _, value := range post.Body.([]interface{}) {
+		body = append(body, value.(string))
+	}
+	post.Body = strings.Join(body, "\n")
 
-	if err := post.Insert(serv.db); err != nil {
+	if err = post.Insert(serv.db); err != nil {
 		serv.SendInternalErr(w, err)
 		return
 	}
@@ -128,15 +134,22 @@ func (serv *Server) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-// putPostHandler - обновляет задачу
+// putPostHandler - обновляет пост
 func (serv *Server) putPostHandler(w http.ResponseWriter, r *http.Request) {
 	postId := chi.URLParam(r, "id")
-
+	
 	data, _ := ioutil.ReadAll(r.Body)
 
-	post := models.PostItem{}
-	_ = json.Unmarshal(data, &post)
-	post.Id = postId
+	post, _ := models.GetPost(serv.db, postId)
+	err := json.Unmarshal(data, &post)
+	if err != nil {
+		panic(err)
+	}
+	var body []string
+	for _, value := range post.Body.([]interface{}) {
+		body = append(body, value.(string))
+	}
+	post.Body = strings.Join(body, "\n")
 
 	if err := post.Update(serv.db); err != nil {
 		serv.SendInternalErr(w, err)
