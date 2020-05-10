@@ -1,0 +1,8 @@
+mysql:
+  dbname: "blog"
+  user: "root"
+  pass: "root"
+  host: "localhost"
+  sslmode: "false"
+
+# sqlboiler mysql -c sqlboiler.yaml --wipe
