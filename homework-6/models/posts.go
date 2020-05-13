@@ -43,14 +43,16 @@ func (post *Post) Create(ctx context.Context, db *mongo.Database) error {
 }
 
 func (post *Post) Delete(ctx context.Context, db *mongo.Database) error {
+	post.Id, _ = primitive.ObjectIDFromHex(post.Id.(string))
 	coll := db.Collection(post.GetMongoCollectionName())
-	_, err := coll.UpdateOne(ctx, bson.M{"_id": post.Id}, bson.M{"": INACTIVE_STATUS})
+	_, err := coll.UpdateOne(ctx, bson.M{"_id": post.Id}, bson.D{{"$set", bson.D{{"status", INACTIVE_STATUS}}},},)
 	return err
 }
 
 func (post *Post) Update(ctx context.Context, db *mongo.Database) error {
+	post.Id, _ = primitive.ObjectIDFromHex(post.Id.(string))
 	coll := db.Collection(post.GetMongoCollectionName())
-	_, err := coll.UpdateOne(ctx, bson.M{"_id": post.Id}, post)
+	_, err := coll.ReplaceOne(ctx, bson.M{"_id": post.Id}, bson.M{"title":post.Title,"summary":post.Summary,"body":post.Body},)
 	return err
 }
 
@@ -72,6 +74,7 @@ func GetAllPostItems(ctx context.Context, db *mongo.Database) (PostItemSlice, er
 		}
 		
 		post.Body = template.HTML(blackfriday.MarkdownCommon([]byte(post.Body.(string))))
+		post.Id = post.Id.(primitive.ObjectID).Hex()
 		posts = append(posts, post)
 	}
 	cur.Close(ctx)
@@ -84,11 +87,10 @@ func GetPost(ctx context.Context, db *mongo.Database, id string) (Post, error) {
 
 	postId, _ := primitive.ObjectIDFromHex(id)	
 	res := coll.FindOne(ctx, bson.M{"_id": postId})
-	//var body string
-	//if err := res.Decode(&post.Id, &post.Title, &post.Date, &post.Summary, &body, &post.Status); err != nil {
 	if err := res.Decode(&post); err != nil {
 		return post, err
 	}
 	post.Body = template.HTML(blackfriday.MarkdownCommon([]byte(post.Body.(string))))
+	post.Id = post.Id.(primitive.ObjectID).Hex()
 	return post, nil
 }

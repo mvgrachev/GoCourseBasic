@@ -11,11 +11,11 @@ import (
 	"GoCourseBasic/homework-6/models"
 	"github.com/go-chi/chi"
 	"strings"
-	"fmt"
 )
 
 // getAllPosts - возвращает все посты
 func (serv *Server) getAllPosts(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	templateName := chi.URLParam(r, "template")
 
 	if templateName == "" {
@@ -28,24 +28,29 @@ func (serv *Server) getAllPosts(w http.ResponseWriter, r *http.Request) {
 			w.WriteHeader(http.StatusNotFound)
 			return
 		}
+		serv.lg.Debug("00000000000000")
 		serv.SendInternalErr(w, err)
 		return
 	}
 
 	data, err := ioutil.ReadAll(file)
 	if err != nil {
+		serv.lg.Debug("222222222")
 		serv.SendInternalErr(w, err)
 		return
 	}
 
 	templ, err := template.New("Page").Parse(string(data))
 	if err != nil {
+		serv.lg.Debug("33333333")
 		serv.SendInternalErr(w, err)
 		return
 	}
 
-	posts, err := models.GetAllPostItems(serv.ctx, serv.db)
+	posts, err := models.GetAllPostItems(ctx, serv.db)
 	if err != nil {
+		serv.lg.Debug("4444444444")
+		serv.lg.Debug(serv.db)
 		serv.SendInternalErr(w, err)
 		return
 	}
@@ -61,6 +66,7 @@ func (serv *Server) getAllPosts(w http.ResponseWriter, r *http.Request) {
 
 // getPost - возвращает шаблон
 func (serv *Server) getPost(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	postId := chi.URLParam(r, "Id")
 
 	if postId == "" {
@@ -90,7 +96,7 @@ func (serv *Server) getPost(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	post, err := models.GetPost(serv.ctx, serv.db, postId)
+	post, err := models.GetPost(ctx, serv.db, postId)
 	if err != nil {
 		serv.SendInternalErr(w, err)
 		return
@@ -104,6 +110,7 @@ func (serv *Server) getPost(w http.ResponseWriter, r *http.Request) {
 
 // postPostHandler - добавляет новый post
 func (serv *Server) postPostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	data, _ := ioutil.ReadAll(r.Body)
 
 	post := &models.Post{}
@@ -114,8 +121,7 @@ func (serv *Server) postPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	post.Body = strings.Join(body, "\n")
 
-fmt.Println("11111111111111!")
-	if err = post.Create(serv.ctx, serv.db); err != nil {
+	if err = post.Create(ctx, serv.db); err != nil {
 		serv.SendInternalErr(w, err)
 		return
 	}
@@ -126,15 +132,12 @@ fmt.Println("11111111111111!")
 
 // deletePostHandler - удаляет пост
 func (serv *Server) deletePostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	postId := chi.URLParam(r, "id")
 
-	//post := models.Post{
-	//	Mongo: models.Mongo{
-	//		Id: postId,
-	//	},
-	//}
-	post, _ := models.GetPost(serv.ctx, serv.db, postId)
-	if err := post.Delete(serv.ctx, serv.db); err != nil {
+	post := models.Post{}
+	post.Id = postId
+	if err := post.Delete(ctx, serv.db); err != nil {
 		serv.SendInternalErr(w, err)
 		return
 	}
@@ -142,11 +145,14 @@ func (serv *Server) deletePostHandler(w http.ResponseWriter, r *http.Request) {
 
 // putPostHandler - обновляет пост
 func (serv *Server) putPostHandler(w http.ResponseWriter, r *http.Request) {
+	ctx := r.Context()
 	postId := chi.URLParam(r, "id")
-	
+	//postId = postId.(string)
 	data, _ := ioutil.ReadAll(r.Body)
 
-	post, _ := models.GetPost(serv.ctx, serv.db, postId)
+	//post, _ := models.GetPost(ctx, serv.db, postId)
+	post := models.Post{}
+	post.Id = postId
 	err := json.Unmarshal(data, &post)
 	if err != nil {
 		panic(err)
@@ -157,9 +163,7 @@ func (serv *Server) putPostHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	post.Body = strings.Join(body, "\n")
 
-fmt.Println("1111111")
-	if err := post.Update(serv.ctx, serv.db); err != nil {
-fmt.Println("222222")
+	if err := post.Update(ctx, serv.db); err != nil {
 		serv.SendInternalErr(w, err)
 		return
 	}

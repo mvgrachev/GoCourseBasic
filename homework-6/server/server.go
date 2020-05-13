@@ -1,7 +1,6 @@
 package server
 
 import (
-	//"database/sql"
 	"encoding/json"
 	"net/http"
 
@@ -9,13 +8,11 @@ import (
 	"github.com/sirupsen/logrus"
 	"GoCourseBasic/homework-6/models"
 	"go.mongodb.org/mongo-driver/mongo"
-	"context"
 )
 
 // Server - объект сервера
 type Server struct {
 	lg            *logrus.Logger
-	ctx           context.Context
 	db            *mongo.Database
 	templatesDir  string
 	indexTemplate string
@@ -23,10 +20,9 @@ type Server struct {
 }
 
 // New - создаёт новый экземпляр сервера
-func New(lg *logrus.Logger, ctx context.Context, db *mongo.Database) *Server {
+func New(lg *logrus.Logger, db *mongo.Database) *Server {
 	return &Server{
 		lg:            lg,
-		ctx:           ctx,
 		db:            db,
 		templatesDir:  "./templates",
 		indexTemplate: "index.html",

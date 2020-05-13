@@ -29,18 +29,21 @@ func main() {
 	flag.Parse()
 
 	lg := NewLogger()
-	ctx, _ := context.WithTimeout(context.Background(), 10*time.Second)
 	
-	client, err := mongo.Connect(ctx, options.Client().ApplyURI("mongodb://localhost:27017"))
+	client, err := mongo.NewClient(options.Client().ApplyURI("mongodb://localhost:27017"))
 	if err != nil {
 		lg.WithError(err).Fatal("can't connect to db")
 	}
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	err = client.Connect(ctx)
+	if err != nil {
+		lg.WithError(err).Fatal("can't connect to db")
+	}
+
 	db := client.Database("blog")
 
-	if err != nil {
-		lg.WithError(err).Fatal("can't connect to db")
-	}
-	serv := server.New(lg, ctx, db)
+	serv := server.New(lg, db)
 
 	go func() {
 		err := serv.Start(*flagServAddr)
