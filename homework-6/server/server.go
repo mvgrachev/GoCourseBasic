@@ -17,6 +17,7 @@ type Server struct {
 	templatesDir  string
 	indexTemplate string
 	Page          models.Page
+	post          *models.Post
 }
 
 // New - создаёт новый экземпляр сервера
@@ -30,6 +31,7 @@ func New(lg *logrus.Logger, db *mongo.Database) *Server {
 			Posts: models.PostItemSlice{
 			},
 		},
+		post: &models.Post{},
 	}
 }
 
